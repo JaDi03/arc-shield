@@ -68,7 +68,7 @@ Ensure you have Node.js (v18+) and npm installed.
 ### 2. Installation
 Clone the repository and install the dependencies:
 ```bash
-git clone https://github.com/<your-username>/arc-shield.git
+git clone https://github.com/JaDi03/arc-shield.git
 cd arc-shield
 npm install
 ```
@@ -91,26 +91,44 @@ npm run test:contracts
 
 Below is a quick demonstration of how to integrate the SDK into an AI agent workflow:
 
-### Step 1: Admin configures the Guard rules (Owner)
-The human owner sets limits and allowlists the target API.
+### Step 1: Deploy a secure Shield Vault (Owner)
+The human owner deploys a secure, isolated on-chain shield vault for their agent in one line of TypeScript code (using the pre-deployed factory contract on Arc Testnet):
+
 ```typescript
 import { ArcShieldAdmin } from "arc-shield";
 
-const admin = new ArcShieldAdmin({
+// Deploy the Shield Vault programmatically
+const shieldAddress = await ArcShieldAdmin.deployShield({
   rpcUrl: process.env.RPC, // Obtained from `arc-canteen rpc-url`
-  contractAddress: "0xYourShieldContractAddress",
+  factoryAddress: "0x9c285B34f3489E7AF30712D25461D36Da21295c9", // Factory address
   privateKey: process.env.OWNER_PRIVATE_KEY, // Human owner key
+  agentAddress: "0xYourAgentWalletAddress", // The bot's wallet address
+  usdcAddress: "0x3600000000000000000000000000000000000000", // USDC on Arc Testnet
+  dailyLimit: 100.00, // 100 USDC daily spending limit
+  maxTxAmount: 30.00, // 30 USDC max limit per transaction
+});
+
+console.log("Shield Vault deployed at:", shieldAddress);
+```
+
+### Step 2: Manage Limits and Allowlist (Owner)
+The human owner can manage rules, authorise merchant APIs, freeze operations, or withdraw funds from their admin instance:
+
+```typescript
+const admin = new ArcShieldAdmin({
+  rpcUrl: process.env.RPC,
+  contractAddress: shieldAddress, // The address returned in Step 1
+  privateKey: process.env.OWNER_PRIVATE_KEY,
 });
 
 // Authorize a specific merchant/API target
 await admin.setAllowlist("0xMerchantAPIAddress", true);
 
-// Set spending limits: 100 USDC daily, max 30 USDC per transaction
-await admin.updateDailyLimit(100.00);
-await admin.updateMaxTxAmount(30.00);
+// Dynamically adjust spending limits if needed
+await admin.updateDailyLimit(150.00);
 ```
 
-### Step 2: Agent attempts to pay (Agent)
+### Step 3: Agent attempts to pay (Agent)
 The AI agent uses its session key to execute transactions.
 ```typescript
 import { ArcShieldClient } from "arc-shield";
