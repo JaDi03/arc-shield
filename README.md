@@ -189,6 +189,10 @@ Open `.env` and configure:
 ### Step 2: Deploy the Factory Contract
 Deploy `ArcShieldFactory.sol` to Arc Testnet:
 ```bash
+# Using pnpm
+pnpm hardhat run scripts/deploy-factory.ts --network arcTestnet
+
+# Or using npx
 npx hardhat run scripts/deploy-factory.ts --network arcTestnet
 ```
 Copy the printed **Factory Address** and add it to your `.env` file:
@@ -199,6 +203,10 @@ FACTORY_ADDRESS="0x..."
 ### Step 3: Run the Live Testnet Demo
 Run the testnet integration demo. This script uses the SDK to deploy a fresh shield contract, whitelists a destination, and demonstrates prompt-injection defense live on the real Arc Testnet:
 ```bash
+# Using pnpm
+pnpm ts-node example/testnet-demo.ts
+
+# Or using npx
 npx ts-node example/testnet-demo.ts
 ```
 

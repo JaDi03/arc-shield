@@ -5,10 +5,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "compile": "npx hardhat compile",
-    "test:contracts": "npx hardhat test",
+    "compile": "hardhat compile",
+    "test:contracts": "hardhat test",
     "build:sdk": "tsc",
-    "prepublishOnly": "npm run compile && npm run build:sdk"
+    "prepublishOnly": "pnpm run compile && pnpm run build:sdk"
   },
   "keywords": [
     "arc",
