@@ -1,5 +1,7 @@
 # 🛡️ arc-shield: On-Chain Security Guardrail for AI Agents on Arc Network
 
+![arc-shield banner](./arc_shield_banner.png)
+
 `arc-shield` is an open-source security primitive and developer starter kit for building safe, autonomous agentic commerce workflows on the **Arc Network** (Circle's stablecoin-native Layer-1 blockchain).
 
 It combines a secure, policy-enforcing Solidity smart contract (`ArcShield.sol`) with a lightweight, developer-friendly TypeScript SDK (`arc-shield-sdk`) to constrain AI agent spending and transactions directly on-chain.
