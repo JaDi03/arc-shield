@@ -5,11 +5,13 @@ import {
   Address, 
   PublicClient, 
   WalletClient, 
-  parseUnits
+  parseUnits,
+  parseEventLogs
 } from "viem";
 import { privateKeyToAccount, Account } from "viem/accounts";
 import { ArcShieldConfig } from "./types";
 import { ARC_SHIELD_ABI } from "./abi";
+import { ARC_SHIELD_FACTORY_ABI } from "./factoryAbi";
 import { arcTestnet } from "./client";
 
 /**
@@ -17,6 +19,71 @@ import { arcTestnet } from "./client";
  * Requires the owner's private key to execute transactions.
  */
 export class ArcShieldAdmin {
+  /**
+   * Deploys a new ArcShield contract using the pre-deployed ArcShieldFactory.
+   * @param config Configuration parameters containing:
+   *   - rpcUrl: RPC endpoint
+   *   - factoryAddress: Address of the pre-deployed factory contract
+   *   - privateKey: Owner's private key (deploys and owns the shield)
+   *   - agentAddress: AI Agent authorized key address
+   *   - usdcAddress: ERC20 USDC address (6 decimals)
+   *   - dailyLimit: Cumulative limit in USDC (e.g. 100)
+   *   - maxTxAmount: Single tx limit in USDC (e.g. 30)
+   * @returns Address of the newly deployed ArcShield contract.
+   */
+  static async deployShield(config: {
+    rpcUrl: string;
+    factoryAddress: Address;
+    privateKey: `0x${string}`;
+    agentAddress: Address;
+    usdcAddress: Address;
+    dailyLimit: number;
+    maxTxAmount: number;
+  }): Promise<Address> {
+    const account = privateKeyToAccount(config.privateKey);
+
+    const publicClient = createPublicClient({
+      chain: arcTestnet,
+      transport: http(config.rpcUrl),
+    });
+
+    const walletClient = createWalletClient({
+      account,
+      chain: arcTestnet,
+      transport: http(config.rpcUrl),
+    });
+
+    const dailyLimitBigInt = parseUnits(config.dailyLimit.toString(), 6);
+    const maxTxAmountBigInt = parseUnits(config.maxTxAmount.toString(), 6);
+
+    const { request } = await publicClient.simulateContract({
+      account,
+      address: config.factoryAddress,
+      abi: ARC_SHIELD_FACTORY_ABI,
+      functionName: "createShield",
+      args: [
+        config.agentAddress,
+        config.usdcAddress,
+        dailyLimitBigInt,
+        maxTxAmountBigInt,
+      ],
+    });
+
+    const hash = await walletClient.writeContract(request as any);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+    const logs = parseEventLogs({
+      abi: ARC_SHIELD_FACTORY_ABI,
+      eventName: "ShieldCreated",
+      logs: receipt.logs,
+    });
+
+    if (logs.length === 0) {
+      throw new Error("ArcShieldFactory: Failed to parse ShieldCreated event log.");
+    }
+
+    return logs[0].args.shieldAddress;
+  }
   private publicClient: PublicClient;
   private walletClient: WalletClient;
   private account: Account;
