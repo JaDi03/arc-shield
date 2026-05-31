@@ -57,8 +57,14 @@ Prompt engineering (*"You are a helpful agent. Never transfer more than 10 USDC"
 
 This project is structured as a **standalone, modular developer starter-kit**:
 * `/contracts`: The Solidity security guardrail contracts.
+  * `ArcShield.sol`: The core vault contract enforcing daily spending limits and allowed destinations.
+  * `ArcShieldFactory.sol`: Deploys individual shield instances programmatically.
+  * `mocks/MockUSDC.sol`: ERC-20 mock token used to simulate USDC during local testing.
 * `/src`: The TypeScript SDK (`ArcShieldClient` and `ArcShieldAdmin`).
-* `/test`: Smart contract tests verifying all edge cases (daily limit window, locks, withdrawals).
+* `/test`: Smart contract tests verifying all edge cases (daily limit window, locks, withdrawals, factory deployments).
+* `/scripts`: Hardhat deployment automation scripts.
+* `/example`: Executable scripts demonstrating local and testnet agent simulation runs.
+* `/public`: Cover banner and documentation assets.
 
 ---
 
@@ -76,13 +82,13 @@ npm install
 ```
 
 ### 3. Compilation
-Compile the Solidity contracts using Hardhat:
+Compile the Solidity contracts and generate TypeChain typings:
 ```bash
 npm run compile
 ```
 
-### 4. Running Tests
-Run the local test suite to verify spending limit resets and allowlist checks:
+### 4. Running Local Tests
+Run the local test suite. This starts an in-memory EVM node, deploys the `MockUSDC` token and the `ArcShieldFactory`, and executes the complete security policy tests:
 ```bash
 npm run test:contracts
 ```
@@ -166,15 +172,30 @@ try {
 
 ## 🛠️ Deploying to Arc Testnet
 
-1. Sync your canteen developer environment:
-   ```bash
-   arc-canteen context sync
-   ```
-2. Export your RPC URL:
-   ```bash
-   source ~/.arc-canteen/env
-   ```
-3. Set your deployment environment variables in `.env` and deploy the contract using Hardhat scripts or your preferred deployment tool.
+### Step 1: Set up Environment Variables
+Create a `.env` file in the root of the project:
+```bash
+cp .env.example .env
+```
+Open `.env` and configure:
+* `RPC`: Your Arc Testnet JSON-RPC endpoint (e.g. from `arc-canteen status` or `~/.arc-canteen/env`).
+* `PRIVATE_KEY`: Your owner private key (the wallet that will deploy and own the Factory and Shields). **Make sure this account has some USDC for gas (request it from the [Circle Faucet](https://faucet.circle.com)).**
+
+### Step 2: Deploy the Factory Contract
+Deploy `ArcShieldFactory.sol` to Arc Testnet:
+```bash
+npx hardhat run scripts/deploy-factory.ts --network arcTestnet
+```
+Copy the printed **Factory Address** and add it to your `.env` file:
+```bash
+FACTORY_ADDRESS="0x..."
+```
+
+### Step 3: Run the Live Testnet Demo
+Run the testnet integration demo. This script uses the SDK to deploy a fresh shield contract, whitelists a destination, and demonstrates prompt-injection defense live on the real Arc Testnet:
+```bash
+npx ts-node example/testnet-demo.ts
+```
 
 ---
 
