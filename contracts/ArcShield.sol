@@ -60,15 +60,17 @@ contract ArcShield {
     }
 
     constructor(
+        address _owner,
         address _agent,
         address _usdc,
         uint256 _dailyLimit,
         uint256 _maxTxAmount
     ) {
+        require(_owner != address(0), "Owner address cannot be zero");
         require(_agent != address(0), "Agent address cannot be zero");
         require(_usdc != address(0), "USDC address cannot be zero");
         
-        owner = msg.sender;
+        owner = _owner;
         agent = _agent;
         usdc = _usdc;
         dailyLimit = _dailyLimit;

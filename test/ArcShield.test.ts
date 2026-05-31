@@ -27,6 +27,7 @@ describe("ArcShield Contract", function () {
     // Deploy ArcShield
     const ArcShield = await ethers.getContractFactory("ArcShield");
     shield = await ArcShield.deploy(
+      owner.address,
       agent.address,
       await usdc.getAddress(),
       DAILY_LIMIT,
