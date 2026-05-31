@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>arc-shield · Dashboard de Control</title>
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Ethers.js CDN for Web3 connection -->
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              bg: '#09090b',
+              card: '#121215',
+              border: '#1f1f23',
+              cyan: '#06b6d4',
+              purple: '#a855f7',
+              red: '#ef4444',
+              green: '#22c55e',
+              muted: '#71717a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #09090b;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+    .glass-card {
+      background: rgba(18, 18, 21, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .neon-border-cyan:focus {
+      border-color: #06b6d4;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+    }
+    .neon-border-purple:focus {
+      border-color: #a855f7;
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
+    }
+  </style>
+</head>
+<body class="text-gray-100 font-sans min-h-screen pb-16">
+
+  <!-- Navigation / Header -->
+  <header class="border-b border-brand-border bg-brand-bg/50 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🛡️</span>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-brand-cyan to-brand-purple">arc-shield</h1>
+          <p class="text-xs text-brand-muted font-medium">Security Guardrail for AI Agents</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="btnConnect" onclick="connectWallet()" class="px-4 py-2 text-sm font-semibold rounded-lg bg-white text-black hover:bg-gray-200 transition-all shadow-md">
+          Conectar Billetera
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 mt-8">
+    <!-- Network & Wallet Info Banner -->
+    <div id="connectionBanner" class="mb-6 p-4 rounded-xl glass-card flex justify-between items-center text-sm border-l-4 border-brand-cyan">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-brand-cyan animate-pulse"></span>
+        <span class="font-medium text-brand-muted">Billetera:</span>
+        <span id="walletAddress" class="font-mono text-gray-200">No conectada</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="font-medium text-brand-muted">Red:</span>
+        <span id="networkName" class="font-semibold text-brand-cyan">Arc Testnet (5042002)</span>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Left Column: Contract Loading & Status -->
+      <div class="lg:col-span-1 space-y-6">
+        <!-- Load Contract Card -->
+        <div class="p-6 rounded-2xl glass-card">
+          <h2 class="text-md font-bold mb-4 flex items-center gap-2">
+            <span>⚙️</span> Cargar Contrato
+          </h2>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs text-brand-muted mb-1.5 font-medium">Dirección del Escudo (ArcShield)</label>
+              <input id="inputContractAddress" type="text" placeholder="0x..." class="w-full bg-brand-bg/80 border border-brand-border rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none neon-border-cyan">
+            </div>
+            <button onclick="loadContractData()" class="w-full py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-brand-cyan to-brand-purple text-white hover:opacity-90 transition-all">
+              Leer Datos en Cadena
+            </button>
+          </div>
+        </div>
+
+        <!-- Status Dashboard Card -->
+        <div class="p-6 rounded-2xl glass-card space-y-4">
+          <h2 class="text-md font-bold flex justify-between items-center">
+            <span class="flex items-center gap-2">📊 Estado Guardián</span>
+            <span id="badgeStatus" class="px-2 py-0.5 text-xs font-semibold rounded-full bg-zinc-800 text-brand-muted">INACTIVO</span>
+          </h2>
+          
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between border-b border-brand-border/40 pb-2">
+              <span class="text-brand-muted">Dueño (Humano):</span>
+              <span id="txtOwner" class="font-mono text-xs text-gray-300">--</span>
+            </div>
+            <div class="flex justify-between border-b border-brand-border/40 pb-2">
+              <span class="text-brand-muted">Agente Autorizado:</span>
+              <span id="txtAgent" class="font-mono text-xs text-gray-300">--</span>
+            </div>
+            <div class="flex justify-between border-b border-brand-border/40 pb-2">
+              <span class="text-brand-muted">Límite Diario:</span>
+              <span id="txtDailyLimit" class="font-semibold text-gray-200">--</span>
+            </div>
+            <div class="flex justify-between border-b border-brand-border/40 pb-2">
+              <span class="text-brand-muted">Límite por Tx:</span>
+              <span id="txtMaxTx" class="font-semibold text-gray-200">--</span>
+            </div>
+            <div class="flex justify-between border-b border-brand-border/40 pb-2">
+              <span class="text-brand-muted">Gastado Hoy:</span>
+              <span id="txtDailySpent" class="font-semibold text-gray-200">--</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-brand-muted">Cupo Disponible:</span>
+              <span id="txtRemaining" class="font-bold text-brand-cyan">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Policies & Actions -->
+      <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Emergency Controls Card -->
+        <div class="p-6 rounded-2xl glass-card border border-brand-red/20 bg-brand-red/5">
+          <h2 class="text-md font-bold text-brand-red mb-3 flex items-center gap-2">
+            <span>🚨</span> Control de Emergencia (Owner Only)
+          </h2>
+          <p class="text-xs text-brand-muted mb-4">
+            Si detectas comportamientos extraños en tu agente de IA (como bucles de ejecución o respuestas inusuales), activa el bloqueo para congelar su billetera en la blockchain de inmediato.
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <button id="btnToggleLock" onclick="toggleLock()" class="px-5 py-2.5 text-sm font-semibold rounded-lg bg-brand-red text-white hover:bg-red-600 transition-all flex-1 min-w-[150px]">
+              Bloqueo de Pánico (Freeze)
+            </button>
+            <button onclick="withdrawAll()" class="px-5 py-2.5 text-sm font-semibold rounded-lg bg-zinc-800 border border-brand-border hover:bg-zinc-700 text-white transition-all flex-1 min-w-[150px]">
+              Retirar Todos los Fondos
+            </button>
+          </div>
+        </div>
+
+        <!-- Management Options Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Manage Limits Card -->
+          <div class="p-6 rounded-2xl glass-card">
+            <h3 class="text-sm font-bold text-gray-200 mb-4 flex items-center gap-2">
+              <span>🔧</span> Modificar Límites
+            </h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs text-brand-muted mb-1 font-medium">Nuevo Límite Diario (USDC)</label>
+                <div class="relative">
+                  <input id="inputDailyLimit" type="number" placeholder="100" class="w-full bg-brand-bg/80 border border-brand-border rounded-lg pl-3 pr-12 py-2 text-sm text-white focus:outline-none neon-border-purple">
+                  <span class="absolute right-3 top-2 text-xs text-brand-muted font-bold font-mono">USDC</span>
+                </div>
+              </div>
+              <button onclick="updateDailyLimit()" class="w-full py-2 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-brand-purple border border-brand-purple/20 transition-all">
+                Actualizar Límite Diario
+              </button>
+
+              <hr class="border-brand-border/40 my-3">
+
+              <div>
+                <label class="block text-xs text-brand-muted mb-1 font-medium">Límite Máximo por Tx (USDC)</label>
+                <div class="relative">
+                  <input id="inputMaxTx" type="number" placeholder="30" class="w-full bg-brand-bg/80 border border-brand-border rounded-lg pl-3 pr-12 py-2 text-sm text-white focus:outline-none neon-border-purple">
+                  <span class="absolute right-3 top-2 text-xs text-brand-muted font-bold font-mono">USDC</span>
+                </div>
+              </div>
+              <button onclick="updateMaxTx()" class="w-full py-2 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-brand-purple border border-brand-purple/20 transition-all">
+                Actualizar Límite por Tx
+              </button>
+            </div>
+          </div>
+
+          <!-- Allowlist Manager Card -->
+          <div class="p-6 rounded-2xl glass-card space-y-4">
+            <h3 class="text-sm font-bold text-gray-200 flex items-center gap-2">
+              <span>📝</span> Lista Blanca de Destinos
+            </h3>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-brand-muted mb-1 font-medium">Dirección del Destino / Contrato / API</label>
+                <input id="inputAllowlistAddress" type="text" placeholder="0x..." class="w-full bg-brand-bg/80 border border-brand-border rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none neon-border-cyan">
+              </div>
+              <div class="flex gap-2">
+                <button onclick="setAllowlistStatus(true)" class="flex-1 py-2 text-xs font-semibold rounded-lg bg-brand-cyan/10 hover:bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/20 transition-all">
+                  Whitelist ✅
+                </button>
+                <button onclick="setAllowlistStatus(false)" class="flex-1 py-2 text-xs font-semibold rounded-lg bg-brand-red/10 hover:bg-brand-red/20 text-brand-red border border-brand-red/20 transition-all">
+                  Blacklist ❌
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Contract ABI definition for JS -->
+  <script>
+    const ABI = [
+      "function owner() view returns (address)",
+      "function agent() view returns (address)",
+      "function dailyLimit() view returns (uint256)",
+      "function maxTxAmount() view returns (uint256)",
+      "function dailySpent() view returns (uint256)",
+      "function isAllowlisted(address) view returns (bool)",
+      "function isLocked() view returns (bool)",
+      "function setAllowlist(address,bool)",
+      "function updateDailyLimit(uint256)",
+      "function updateMaxTxAmount(uint256)",
+      "function setEmergencyLock(bool)",
+      "function withdrawFunds(address)"
+    ];
+
+    let provider;
+    let signer;
+    let userAddress;
+    let activeContract;
+
+    async function connectWallet() {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          userAddress = accounts[0];
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          
+          document.getElementById('walletAddress').innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
+          document.getElementById('btnConnect').innerText = "Conectado";
+          console.log("Wallet connected:", userAddress);
+
+          // Listen to chain changes
+          window.ethereum.on('chainChanged', () => window.location.reload());
+        } catch (err) {
+          alert("Error de conexión: " + err.message);
+        }
+      } else {
+        alert("Instala una billetera Web3 (MetaMask, Rabby) para continuar.");
+      }
+    }
+
+    async function loadContractData() {
+      const address = document.getElementById('inputContractAddress').value.trim();
+      if (!address || !ethers.utils.isAddress(address)) {
+        alert("Por favor ingresa una dirección de contrato válida.");
+        return;
+      }
+
+      if (!provider) {
+        alert("Por favor conecta tu billetera primero.");
+        return;
+      }
+
+      try {
+        activeContract = new ethers.Contract(address, ABI, signer);
+
+        const ownerAddress = await activeContract.owner();
+        const agentAddress = await activeContract.agent();
+        const dailyLimitRaw = await activeContract.dailyLimit();
+        const maxTxRaw = await activeContract.maxTxAmount();
+        const spentRaw = await activeContract.dailySpent();
+        const isLocked = await activeContract.isLocked();
+
+        // format decimals (6 decimals for USDC)
+        const dailyLimit = ethers.utils.formatUnits(dailyLimitRaw, 6);
+        const maxTx = ethers.utils.formatUnits(maxTxRaw, 6);
+        const spent = ethers.utils.formatUnits(spentRaw, 6);
+        const remaining = Math.max(0, dailyLimit - spent);
+
+        // Update UI
+        document.getElementById('txtOwner').innerText = ownerAddress.slice(0,6) + "..." + ownerAddress.slice(-4);
+        document.getElementById('txtOwner').title = ownerAddress;
+        document.getElementById('txtAgent').innerText = agentAddress.slice(0,6) + "..." + agentAddress.slice(-4);
+        document.getElementById('txtAgent').title = agentAddress;
+        document.getElementById('txtDailyLimit').innerText = dailyLimit + " USDC";
+        document.getElementById('txtMaxTx').innerText = maxTx + " USDC";
+        document.getElementById('txtDailySpent').innerText = spent + " USDC";
+        document.getElementById('txtRemaining').innerText = remaining + " USDC";
+
+        const badge = document.getElementById('badgeStatus');
+        const btnLock = document.getElementById('btnToggleLock');
+        if (isLocked) {
+          badge.innerText = "BLOQUEADO";
+          badge.className = "px-2 py-0.5 text-xs font-semibold rounded-full bg-red-900/50 text-brand-red animate-pulse";
+          btnLock.innerText = "Desbloquear Guardián";
+          btnLock.className = "px-5 py-2.5 text-sm font-semibold rounded-lg bg-brand-green text-white hover:opacity-90 transition-all flex-1 min-w-[150px]";
+        } else {
+          badge.innerText = "ACTIVO";
+          badge.className = "px-2 py-0.5 text-xs font-semibold rounded-full bg-green-900/30 text-brand-green";
+          btnLock.innerText = "Bloqueo de Pánico (Freeze)";
+          btnLock.className = "px-5 py-2.5 text-sm font-semibold rounded-lg bg-brand-red text-white hover:opacity-90 transition-all flex-1 min-w-[150px]";
+        }
+      } catch (err) {
+        alert("Error al leer el contrato: " + err.message);
+      }
+    }
+
+    // Owner operations
+    async function toggleLock() {
+      if (!activeContract) return alert("Por favor carga el contrato primero.");
+      try {
+        const currentLock = await activeContract.isLocked();
+        const tx = await activeContract.setEmergencyLock(!currentLock);
+        alert("Transacción de bloqueo enviada. Hash: " + tx.hash);
+        await tx.wait();
+        alert("Transacción confirmada en cadena.");
+        loadContractData();
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+
+    async function withdrawAll() {
+      if (!activeContract) return alert("Por favor carga el contrato primero.");
+      const to = prompt("Ingresa la billetera fría segura para retirar todos los fondos:");
+      if (!to || !ethers.utils.isAddress(to)) return alert("Dirección inválida.");
+      try {
+        const tx = await activeContract.withdrawFunds(to);
+        alert("Transacción de retiro enviada. Hash: " + tx.hash);
+        await tx.wait();
+        alert("Retiro completado.");
+        loadContractData();
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+
+    async function updateDailyLimit() {
+      if (!activeContract) return alert("Por favor carga el contrato primero.");
+      const amount = document.getElementById('inputDailyLimit').value;
+      if (!amount || amount <= 0) return alert("Ingresa un monto válido.");
+      try {
+        const parsed = ethers.utils.parseUnits(amount.toString(), 6);
+        const tx = await activeContract.updateDailyLimit(parsed);
+        alert("Transacción enviada. Hash: " + tx.hash);
+        await tx.wait();
+        alert("Límite diario actualizado.");
+        loadContractData();
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+
+    async function updateMaxTx() {
+      if (!activeContract) return alert("Por favor carga el contrato primero.");
+      const amount = document.getElementById('inputMaxTx').value;
+      if (!amount || amount <= 0) return alert("Ingresa un monto válido.");
+      try {
+        const parsed = ethers.utils.parseUnits(amount.toString(), 6);
+        const tx = await activeContract.updateMaxTxAmount(parsed);
+        alert("Transacción enviada. Hash: " + tx.hash);
+        await tx.wait();
+        alert("Límite por transacción actualizado.");
+        loadContractData();
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+
+    async function setAllowlistStatus(allowed) {
+      if (!activeContract) return alert("Por favor carga el contrato primero.");
+      const target = document.getElementById('inputAllowlistAddress').value.trim();
+      if (!target || !ethers.utils.isAddress(target)) return alert("Dirección inválida.");
+      try {
+        const tx = await activeContract.setAllowlist(target, allowed);
+        alert("Transacción enviada. Hash: " + tx.hash);
+        await tx.wait();
+        alert("Lista blanca actualizada para " + target);
+        loadContractData();
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
