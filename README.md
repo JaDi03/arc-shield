@@ -78,19 +78,24 @@ Clone the repository and install the dependencies:
 ```bash
 git clone https://github.com/JaDi03/arc-shield.git
 cd arc-shield
+
+# Using pnpm (Recommended - cleaner installation without vulnerability spam)
+pnpm install
+
+# Or using npm
 npm install
 ```
 
 ### 3. Compilation
 Compile the Solidity contracts and generate TypeChain typings:
 ```bash
-npm run compile
+pnpm run compile  # or npm run compile
 ```
 
 ### 4. Running Local Tests
 Run the local test suite. This starts an in-memory EVM node, deploys the `MockUSDC` token and the `ArcShieldFactory`, and executes the complete security policy tests:
 ```bash
-npm run test:contracts
+pnpm run test:contracts  # or npm run test:contracts
 ```
 
 ---

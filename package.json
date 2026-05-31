@@ -30,5 +30,11 @@
     "dotenv": "^17.4.2",
     "hardhat": "^2.22.4",
     "typescript": "^5.4.5"
+  },
+  "pnpm": {
+    "onlyAllowBuilds": [
+      "keccak",
+      "secp256k1"
+    ]
   }
 }
