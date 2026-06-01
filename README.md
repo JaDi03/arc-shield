@@ -59,11 +59,9 @@ This project is structured as a **standalone, modular developer starter-kit**:
 * `/contracts`: The Solidity security guardrail contracts.
   * `ArcShield.sol`: The core vault contract enforcing daily spending limits and allowed destinations.
   * `ArcShieldFactory.sol`: Deploys individual shield instances programmatically.
-  * `mocks/MockUSDC.sol`: ERC-20 mock token used to simulate USDC during local testing.
 * `/src`: The TypeScript SDK (`ArcShieldClient` and `ArcShieldAdmin`).
-* `/test`: Smart contract tests verifying all edge cases (daily limit window, locks, withdrawals, factory deployments).
 * `/scripts`: Hardhat deployment automation scripts.
-* `/example`: Executable scripts demonstrating local and testnet agent simulation runs.
+* `/example/dashboard`: A simple Web3 administration dashboard for owners to manage daily limits and allowlists.
 * `/public`: Cover banner and documentation assets.
 
 ---
@@ -90,12 +88,6 @@ npm install
 Compile the Solidity contracts and generate TypeChain typings:
 ```bash
 pnpm run compile  # or npm run compile
-```
-
-### 4. Running Local Tests
-Run the local test suite. This starts an in-memory EVM node, deploys the `MockUSDC` token and the `ArcShieldFactory`, and executes the complete security policy tests:
-```bash
-pnpm run test:contracts  # or npm run test:contracts
 ```
 
 ---
@@ -198,16 +190,6 @@ npx hardhat run scripts/deploy-factory.ts --network arcTestnet
 Copy the printed **Factory Address** and add it to your `.env` file:
 ```bash
 FACTORY_ADDRESS="0x..."
-```
-
-### Step 3: Run the Live Testnet Demo
-Run the testnet integration demo. This script uses the SDK to deploy a fresh shield contract, whitelists a destination, and demonstrates prompt-injection defense live on the real Arc Testnet:
-```bash
-# Using pnpm
-pnpm ts-node example/testnet-demo.ts
-
-# Or using npx
-npx ts-node example/testnet-demo.ts
 ```
 
 ---
