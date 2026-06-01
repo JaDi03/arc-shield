@@ -104,7 +104,7 @@ import { ArcShieldAdmin } from "arc-shield";
 
 // Deploy the Shield Vault programmatically
 const shieldAddress = await ArcShieldAdmin.deployShield({
-  rpcUrl: process.env.RPC, // Obtained from `arc-canteen rpc-url`
+  rpcUrl: process.env.RPC, // Arc Testnet RPC URL
   factoryAddress: "0x9c285B34f3489E7AF30712D25461D36Da21295c9", // Factory address
   privateKey: process.env.OWNER_PRIVATE_KEY, // Human owner key
   agentAddress: "0xYourAgentWalletAddress", // The bot's wallet address
@@ -167,6 +167,41 @@ try {
 
 ---
 
+## 🎛️ Web3 Administration Dashboard
+
+The human owner (`owner`) can manage security policies, whitelist/blacklist merchant addresses, update daily limits, freeze operations, and view audit trails via a zero-dependency static Web3 dashboard.
+
+### How to use:
+1. Open the [index.html](file:///c:/Users/USER/Desktop/idea/example/dashboard/index.html) file inside `/example/dashboard` in any web browser.
+2. Click **Connect Wallet** and select your Web3 provider (MetaMask or Rabby). Ensure you are connected with the owner wallet address on Arc Testnet.
+3. Paste the deployed **ArcShield contract address** and click **Read On-Chain Data**.
+4. **Features Available:**
+   - **Status Dashboard:** Shows owner/agent addresses, daily limits, max transaction size, daily amount spent, and remaining allowance.
+   - **Activity Logs:** Automatically queries the blockchain and renders a visual timeline of all past transactions, whitelist changes, limit updates, and freeze locks.
+   - **Manage Limits:** Easily adjust the daily spent limits and maximum single transaction limits.
+   - **Allowlist Manager:** Add or revoke permissions for target addresses/merchant contracts.
+   - **Emergency Freeze:** One-click button to trigger a panic lock, freezing all agent transactions instantly.
+
+---
+
+## 🚨 Passive Security Alerts (Telegram Bot)
+
+`arc-shield` has native support for pushing real-time security alerts directly to a Telegram group or channel when a transaction is blocked (either by the SDK local pre-flight checks or on-chain reverts). 
+
+This is fully passive and works without modifying the agent's code:
+
+### How to set up:
+1. Create a Telegram Bot using `@BotFather` and copy the **Bot Token**.
+2. Add the bot to your Telegram group or channel, and get your **Chat ID** (e.g. using `@raw_data_bot`).
+3. Add the keys to your agent's `.env` configuration file:
+   ```bash
+   TELEGRAM_BOT_TOKEN="123456789:ABCdefGh..."
+   TELEGRAM_CHAT_ID="-100123456789"
+   ```
+4. The SDK will automatically fetch these environment variables and push alerts whenever a transaction fails policy checks.
+
+---
+
 ## 🛠️ Deploying to Arc Testnet
 
 ### Step 1: Set up Environment Variables
@@ -175,7 +210,7 @@ Create a `.env` file in the root of the project:
 cp .env.example .env
 ```
 Open `.env` and configure:
-* `RPC`: Your Arc Testnet JSON-RPC endpoint (e.g. from `arc-canteen status` or `~/.arc-canteen/env`).
+* `RPC`: Your Arc Testnet JSON-RPC endpoint (e.g. `https://rpc.testnet.arc.network`).
 * `PRIVATE_KEY`: Your owner private key (the wallet that will deploy and own the Factory and Shields). **Make sure this account has some USDC for gas (request it from the [Circle Faucet](https://faucet.circle.com)).**
 
 ### Step 2: Deploy the Factory Contract
