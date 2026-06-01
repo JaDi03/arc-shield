@@ -6,7 +6,6 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "compile": "hardhat compile",
-    "test:contracts": "hardhat test",
     "build:sdk": "tsc",
     "prepublishOnly": "pnpm run compile && pnpm run build:sdk"
   },
