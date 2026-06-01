@@ -153,6 +153,16 @@
             </div>
           </div>
         </div>
+
+        <!-- Activity Logs Card -->
+        <div class="p-6 rounded-2xl glass-card">
+          <h2 class="text-md font-bold mb-4 flex items-center gap-2">
+            <span>📜</span> Historial de Actividad
+          </h2>
+          <div id="logContainer" class="space-y-3 text-xs max-h-[280px] overflow-y-auto pr-1">
+            <p class="text-brand-muted italic text-center py-4">Carga un contrato para ver su historial...</p>
+          </div>
+        </div>
       </div>
 
       <!-- Right Column: Policies & Actions -->
@@ -250,7 +260,14 @@
       "function updateDailyLimit(uint256)",
       "function updateMaxTxAmount(uint256)",
       "function setEmergencyLock(bool)",
-      "function withdrawFunds(address)"
+      "function withdrawFunds(address)",
+      "event ActionExecuted(address indexed target, uint256 amount, bytes data)",
+      "event AllowlistUpdated(address indexed target, bool allowed)",
+      "event LimitUpdated(uint256 oldLimit, uint256 newLimit)",
+      "event MaxTxAmountUpdated(uint256 oldMax, uint256 newMax)",
+      "event AgentUpdated(address indexed oldAgent, address indexed newAgent)",
+      "event EmergencyLocked(bool locked)",
+      "event FundsWithdrawn(address indexed to, uint256 amount)"
     ];
 
     let provider;
@@ -331,6 +348,9 @@
           btnLock.innerText = "Bloqueo de Pánico (Freeze)";
           btnLock.className = "px-5 py-2.5 text-sm font-semibold rounded-lg bg-brand-red text-white hover:opacity-90 transition-all flex-1 min-w-[150px]";
         }
+        
+        // Load Activity logs
+        await loadActivityLogs();
       } catch (err) {
         alert("Error al leer el contrato: " + err.message);
       }
@@ -410,6 +430,77 @@
         loadContractData();
       } catch (err) {
         alert("Error: " + err.message);
+      }
+    }
+
+    async function loadActivityLogs() {
+      if (!activeContract) return;
+      const logContainer = document.getElementById('logContainer');
+      logContainer.innerHTML = '<p class="text-brand-muted italic text-center py-4 animate-pulse">Cargando historial...</p>';
+
+      try {
+        const events = await activeContract.queryFilter("*", 0, "latest");
+        events.reverse(); // Newest first
+
+        if (events.length === 0) {
+          logContainer.innerHTML = '<p class="text-brand-muted italic text-center py-4">No se han registrado eventos aún.</p>';
+          return;
+        }
+
+        let html = '<div class="space-y-2">';
+        for (const event of events) {
+          const block = await event.getBlock();
+          const dateStr = new Date(block.timestamp * 1000).toLocaleString();
+          let detail = "";
+          let icon = "⚙️";
+
+          if (event.event === "ActionExecuted") {
+            const amount = ethers.utils.formatUnits(event.args.amount, 6);
+            detail = `Transferidos <b>${amount} USDC</b> a <span class="font-mono">${event.args.target.slice(0,6)}...</span>`;
+            icon = "💸";
+          } else if (event.event === "AllowlistUpdated") {
+            const allowed = event.args.allowed;
+            detail = `${allowed ? "Autorizó" : "Revocó"} dirección <span class="font-mono">${event.args.target.slice(0,6)}...</span>`;
+            icon = allowed ? "✅" : "❌";
+          } else if (event.event === "LimitUpdated") {
+            const oldL = ethers.utils.formatUnits(event.args.oldLimit, 6);
+            const newL = ethers.utils.formatUnits(event.args.newLimit, 6);
+            detail = `Límite diario cambiado de ${oldL} a <b>${newL} USDC</b>`;
+            icon = "📈";
+          } else if (event.event === "MaxTxAmountUpdated") {
+            const oldT = ethers.utils.formatUnits(event.args.oldMax, 6);
+            const newT = ethers.utils.formatUnits(event.args.newMax, 6);
+            detail = `Límite por tx cambiado de ${oldT} a <b>${newT} USDC</b>`;
+            icon = "🛠️";
+          } else if (event.event === "EmergencyLocked") {
+            const locked = event.args.locked;
+            detail = locked ? "<b>Bloqueó</b> el guardián (Pánico)" : "<b>Desbloqueó</b> el guardián";
+            icon = locked ? "🚨" : "🟢";
+          } else if (event.event === "FundsWithdrawn") {
+            const amount = ethers.utils.formatUnits(event.args.amount, 6);
+            detail = `Retiró <b>${amount} USDC</b> a <span class="font-mono">${event.args.to.slice(0,6)}...</span>`;
+            icon = "💰";
+          } else if (event.event === "AgentUpdated") {
+            detail = `Actualizó clave de agente a <span class="font-mono">${event.args.newAgent.slice(0,6)}...</span>`;
+            icon = "🤖";
+          }
+
+          if (detail) {
+            html += `
+              <div class="p-2 rounded bg-zinc-900/50 border border-brand-border/40 flex items-start gap-2">
+                <span class="text-sm">${icon}</span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-gray-200 text-[11px] leading-snug break-all">${detail}</p>
+                  <span class="text-[9px] text-brand-muted block mt-0.5">${dateStr}</span>
+                </div>
+              </div>
+            `;
+          }
+        }
+        html += '</div>';
+        logContainer.innerHTML = html;
+      } catch (err) {
+        logContainer.innerHTML = `<p class="text-brand-red text-center py-4">Error cargando logs: ${err.message}</p>`;
       }
     }
   </script>

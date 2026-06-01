@@ -38,12 +38,14 @@ export const arcTestnet = {
  * to check limits, query the allowlist, and execute on-chain actions.
  */
 export class ArcShieldClient {
+  protected config: ArcShieldConfig;
   protected publicClient: PublicClient;
   protected walletClient: WalletClient;
   protected account: Account;
   protected contractAddress: Address;
 
   constructor(config: ArcShieldConfig) {
+    this.config = config;
     this.contractAddress = config.contractAddress;
     this.account = privateKeyToAccount(config.privateKey);
 
@@ -89,38 +91,46 @@ export class ArcShieldClient {
   ): Promise<`0x${string}`> {
     const amountBigInt = this.parseUSDC(amountUSDC);
 
-    // Perform pre-flight read validations locally to revert earlier with clean error messages
-    const isLocked = await this.isLocked();
-    if (isLocked) {
-      throw new Error("ArcShield: Emergency lock is active. Agent cannot execute actions.");
+    try {
+      // Perform pre-flight read validations locally to revert earlier with clean error messages
+      const isLocked = await this.isLocked();
+      if (isLocked) {
+        throw new Error("ArcShield: Emergency lock is active. Agent cannot execute actions.");
+      }
+
+      const isAllowed = await this.isAllowlisted(target);
+      if (!isAllowed) {
+        throw new Error(`ArcShield: Destination address ${target} is not in the allowlist.`);
+      }
+
+      const maxTx = await this.getMaxTxAmount();
+      if (amountUSDC > maxTx) {
+        throw new Error(`ArcShield: Transaction amount (${amountUSDC} USDC) exceeds single limit of ${maxTx} USDC.`);
+      }
+
+      const remainingDaily = await this.getRemainingDailyLimit();
+      if (amountUSDC > remainingDaily) {
+        throw new Error(`ArcShield: Transaction amount (${amountUSDC} USDC) exceeds remaining daily limit of ${remainingDaily} USDC.`);
+      }
+
+      // Write transaction execution in contract
+      const { request } = await this.publicClient.simulateContract({
+        account: this.account,
+        address: this.contractAddress,
+        abi: ARC_SHIELD_ABI,
+        functionName: "executeAction",
+        args: [target, amountBigInt, data],
+      });
+
+      const hash = await this.walletClient.writeContract(request as any);
+      return hash;
+    } catch (error: any) {
+      // Trigger Telegram notification asynchronously (don't block the execution path)
+      this.sendTelegramAlert(target, amountUSDC, error.message).catch((err) => {
+        console.error("ArcShield SDK: Error sending Telegram alert:", err);
+      });
+      throw error;
     }
-
-    const isAllowed = await this.isAllowlisted(target);
-    if (!isAllowed) {
-      throw new Error(`ArcShield: Destination address ${target} is not in the allowlist.`);
-    }
-
-    const maxTx = await this.getMaxTxAmount();
-    if (amountUSDC > maxTx) {
-      throw new Error(`ArcShield: Transaction amount (${amountUSDC} USDC) exceeds single limit of ${maxTx} USDC.`);
-    }
-
-    const remainingDaily = await this.getRemainingDailyLimit();
-    if (amountUSDC > remainingDaily) {
-      throw new Error(`ArcShield: Transaction amount (${amountUSDC} USDC) exceeds remaining daily limit of ${remainingDaily} USDC.`);
-    }
-
-    // Write transaction execution in contract
-    const { request } = await this.publicClient.simulateContract({
-      account: this.account,
-      address: this.contractAddress,
-      abi: ARC_SHIELD_ABI,
-      functionName: "executeAction",
-      args: [target, amountBigInt, data],
-    });
-
-    const hash = await this.walletClient.writeContract(request as any);
-    return hash;
   }
 
   /**
@@ -215,5 +225,47 @@ export class ArcShieldClient {
       functionName: "agent",
     });
     return agentAddr as Address;
+  }
+
+  /**
+   * Helper to send an alert to Telegram when a policy check or transaction fails.
+   */
+  private async sendTelegramAlert(
+    target: Address,
+    amount: number,
+    reason: string
+  ): Promise<void> {
+    const token = this.config.telegramBotToken || (typeof process !== "undefined" ? process.env.TELEGRAM_BOT_TOKEN : undefined);
+    const chatId = this.config.telegramChatId || (typeof process !== "undefined" ? process.env.TELEGRAM_CHAT_ID : undefined);
+
+    if (!token || !chatId) {
+      return;
+    }
+
+    try {
+      const message = `🚨 *[ArcShield Security Alert]*\n\n` +
+        `*Status:* Transaction Blocked (Guardrail Triggered)\n` +
+        `*Reason:* \`${reason}\`\n` +
+        `*Target Wallet:* \`${target}\`\n` +
+        `*Amount:* \`${amount} USDC\`\n` +
+        `*Vault Contract:* \`${this.contractAddress}\`\n\n` +
+        ` _Action was blocked securely at the action layer._`;
+
+      if (typeof fetch === "function") {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+            parse_mode: "Markdown",
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("ArcShield SDK: Failed to send Telegram webhook alert:", err);
+    }
   }
 }
